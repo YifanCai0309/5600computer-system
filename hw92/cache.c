@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 // Hash function to map message IDs to hash table indices
 unsigned int hash_function(int msg_id) { return msg_id % HASH_TABLE_SIZE; }
 
@@ -37,6 +36,19 @@ void free_cache(Cache *cache) {
   memset(cache->hash_table, 0, sizeof(cache->hash_table));
 }
 
+CacheNode* get_node_at_index(Cache *cache, int index) {
+    if (index < 0 || index >= cache->size) {
+        return NULL;
+    }
+
+    CacheNode *current = cache->head;
+    for (int i = 0; i < index; i++) {
+        if (current != NULL) {
+            current = current->next;
+        }
+    }
+    return current;
+}
 // Detach a node from the cache linked list without freeing it
 void detach_node(Cache *cache, CacheNode *node) {
   if (!cache || !node)
@@ -143,9 +155,22 @@ void cache_put(Cache *cache, Message *msg) {
     return;
 
   if (cache->size >= CACHE_SIZE) {
-    CacheNode *node_to_remove =
-        cache->policy == LRU_REPLACEMENT ? cache->tail : cache->head;
-    remove_node(cache, node_to_remove);
+//    CacheNode *node_to_remove =
+//        cache->policy == LRU_REPLACEMENT ? cache->tail : cache->head;
+//    remove_node(cache, node_to_remove);
+      CacheNode *node_to_remove=NULL;;
+      // LRU_REPLACEMENT
+      if (cache->policy == LRU_REPLACEMENT) {
+          node_to_remove = cache->tail;
+      }
+      // RANDOM_REPLACEMENT
+      else if (cache->policy == RANDOM_REPLACEMENT) {
+          int random_index = rand() % cache->size;
+          node_to_remove = get_node_at_index(cache, random_index);
+      }
+      if (node_to_remove) {
+          remove_node(cache, node_to_remove);
+      }
   }
 
   CacheNode *new_node = (CacheNode *)malloc(sizeof(CacheNode));

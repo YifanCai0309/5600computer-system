@@ -18,6 +18,7 @@ Message *create_msg(const char *sender, const char *receiver,
     return NULL;
   }
 
+
   Message *msg = (Message *)malloc(sizeof(Message));
   if (!msg) {
     return NULL;
