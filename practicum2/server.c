@@ -104,6 +104,7 @@ int handle_write(int client_sock, char *remote_path, long file_size) {
 
 // Function to handle GET command
 int handle_get(int client_sock, char *remote_path) {
+    pthread_mutex_lock(&file_mutex); 
     char full_path[BUFFER_SIZE];
     char encryption_key = 0xAA; // XOR decryption key
 
@@ -113,6 +114,7 @@ int handle_get(int client_sock, char *remote_path) {
     if (strstr(remote_path, "..") != NULL) {
         char *error_msg = "GET_FAIL Invalid path.";
         send(client_sock, error_msg, strlen(error_msg), 0);
+        pthread_mutex_unlock(&file_mutex); 
         return -1;
     }
 
@@ -122,6 +124,7 @@ int handle_get(int client_sock, char *remote_path) {
         perror("Failed to open file for reading");
         char *error_msg = "GET_FAIL File not found.";
         send(client_sock, error_msg, strlen(error_msg), 0);
+        pthread_mutex_unlock(&file_mutex); 
         return -1;
     }
 
@@ -145,6 +148,7 @@ int handle_get(int client_sock, char *remote_path) {
     }
 
     fclose(fp);
+    pthread_mutex_unlock(&file_mutex); 
     return 0;
 }
 
@@ -182,6 +186,7 @@ int remove_path(const char *path) {
 
 // Function to handle RM command
 int handle_rm(int client_sock, char *remote_path) {
+    pthread_mutex_lock(&file_mutex);
     char full_path[BUFFER_SIZE];
     snprintf(full_path, sizeof(full_path), "%s/%s", ROOT_DIR, remote_path);
 
@@ -189,22 +194,26 @@ int handle_rm(int client_sock, char *remote_path) {
     if (strstr(remote_path, "..") != NULL) {
         char *error_msg = "RM_FAIL Invalid path.";
         send(client_sock, error_msg, strlen(error_msg), 0);
+        pthread_mutex_unlock(&file_mutex);
         return -1;
     }
 
     if (remove_path(full_path) == 0) {
         char *success_msg = "RM_SUCCESS";
         send(client_sock, success_msg, strlen(success_msg), 0);
+        pthread_mutex_unlock(&file_mutex);
         return 0;
     } else {
         char *error_msg = "RM_FAIL Unable to remove.";
         send(client_sock, error_msg, strlen(error_msg), 0);
+        pthread_mutex_unlock(&file_mutex);
         return -1;
     }
 }
 
 // Function to list all files in a directory (non-recursive)
 int handle_list(int client_sock, char *remote_path) {
+     pthread_mutex_lock(&file_mutex);
     char full_path[BUFFER_SIZE];
   if (remote_path == NULL || strcmp(remote_path, "") == 0 || strcmp(remote_path, "/") == 0) {
     snprintf(full_path, sizeof(full_path), "%s", ROOT_DIR);  // Direct ROOT_DIR
@@ -216,6 +225,7 @@ int handle_list(int client_sock, char *remote_path) {
     if (strstr(remote_path, "..") != NULL) {
         char *error_msg = "LIST_FAIL Invalid path.";
         send(client_sock, error_msg, strlen(error_msg), 0);
+        pthread_mutex_unlock(&file_mutex);
         return -1;
     }
 
@@ -225,6 +235,7 @@ int handle_list(int client_sock, char *remote_path) {
         perror("Failed to open directory");
         char *error_msg = "LIST_FAIL Directory not found.";
         send(client_sock, error_msg, strlen(error_msg), 0);
+        pthread_mutex_unlock(&file_mutex);
         return -1;
     }
 
@@ -250,7 +261,7 @@ int handle_list(int client_sock, char *remote_path) {
         char *empty_msg = "No files found.\n";
         send(client_sock, empty_msg, strlen(empty_msg), 0);
     }
-
+    pthread_mutex_unlock(&file_mutex);
     return 0;
 }
 
